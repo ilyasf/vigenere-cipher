@@ -2,42 +2,25 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include "./encoding.h"
 
-char *vigenereEncrypt(const char plaintext[], const char keyword[])
+int main(void)
 {
-  int i, j;
-  int plaintextLength = strlen(plaintext);
-  int keywordLength = strlen(keyword);
+  char plaintext[100];
+  char keyword[100];
 
-  char *ciphertext = (char *)malloc((plaintextLength + 1) * sizeof(char)); // Allocate memory for ciphertext
+  printf("Enter the plaintext: ");
+  fgets(plaintext, sizeof(plaintext), stdin);
+  plaintext[strcspn(plaintext, "\n")] = '\0'; // Remove trailing newline
 
-  for (i = 0, j = 0; i < plaintextLength; i++, j++)
-  {
-    if (j == keywordLength)
-      j = 0;
+  printf("Enter the keyword: ");
+  fgets(keyword, sizeof(keyword), stdin);
+  keyword[strcspn(keyword, "\n")] = '\0'; // Remove trailing newline
 
-    // Convert plaintext and keyword characters to uppercase
-    char plainChar = toupper(plaintext[i]);
-    char keyChar = toupper(keyword[j]);
+  char *ciphertext = vigenereEncrypt(plaintext, keyword);
+  printf("Ciphertext: %s\n", ciphertext);
 
-    // Encrypt alphabetic characters only
-    if (isalpha(plainChar))
-    {
-      int encryptedChar = (plainChar + keyChar - 2 * 'A') % 26 + 'A';
-      ciphertext[i] = encryptedChar;
-    }
-    else
-    {
-      ciphertext[i] = plainChar; // Preserve non-alphabetic characters
-      j--;                       // Do not increment j for non-alphabetic characters
-    }
-  }
-  ciphertext[plaintextLength] = '\0'; // Null-terminate the ciphertext string
+  free(ciphertext); // Free the allocated memory
 
-  return ciphertext;
-}
-
-int main(int argc, char *argv[])
-{
   return 0;
 }
