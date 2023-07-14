@@ -6,6 +6,7 @@ set(SOURCE_DIR src)
 set(SOURCE_FILES 
     ${SOURCE_DIR}/encoding.c
     ${SOURCE_DIR}/main.c
+    ${SOURCE_DIR}/hacking-alg.c
 )
 
 # Set the output directory

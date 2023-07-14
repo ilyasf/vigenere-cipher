@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include "./encoding.h"
+#include "./hacking-alg.h"
 
 int main(void)
 {
@@ -20,7 +21,11 @@ int main(void)
   char *ciphertext = vigenereEncrypt(plaintext, keyword);
   printf("Ciphertext: %s\n", ciphertext);
 
+  char *hackedText = hackVigenereEncrypt(ciphertext);
+  printf("Original text might be: %s\n", hackedText);
+
   free(ciphertext); // Free the allocated memory
+  free(hackedText);
 
   return 0;
 }
