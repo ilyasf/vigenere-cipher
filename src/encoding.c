@@ -3,6 +3,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+/**
+ * Encoding english text with using key.
+ * the algorithm encode only english letters.
+ * it takes each character of the given string and move it by using char from key.
+ * there is 2 alg, first is using modular approach (a-z) count of letters + edge,
+ * or bitwise, XOR 2 characters with offsets for the edge cases.
+ */
+
 char *vigenereEncryptModular(const char plainText[], const char keyword[])
 {
   int i, j;
@@ -65,11 +73,11 @@ char *vigenereEncryptBitwise(const char plainText[], const char keyword[])
     if (isalpha(plainChar))
     {
       // Convert both characters to uppercase
-      plainChar = toupper(plainChar);
-      keyChar = toupper(keyChar);
+      plainChar = toupper(plainChar) - 'A';
+      keyChar = toupper(keyChar) - 'A';
 
       // Apply XOR bitwise operation with 'A' to normalize the range
-      char encryptedChar = ((plainChar - 'A') ^ (keyChar - 'A')) + 'A';
+      char encryptedChar = (plainChar ^ keyChar) + 'A'; //((plainChar - 'A') ^ (keyChar - 'A')) + 'A';
 
       cipherText[i] = encryptedChar;
     }

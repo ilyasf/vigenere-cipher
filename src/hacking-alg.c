@@ -1,18 +1,152 @@
+#include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
 
-// F96DE8C227A259C87EE1DA2AED57C93FE5DA36ED4EC87EF2C63AAE5B9A7EFFD673BE4ACF7BE8923CAB1ECE7AF2DA3DA44FCF7AE29235A24C963FF0DF3CA3599A70E5DA36BF1ECE77F8DC34BE129A6CF4D126BF5B9A7CFEDF3EB850D37CF0C63AA2509A76FF9227A55B9A6FE3D720A850D97AB1DD35ED5FCE6BF0D138A84CC931B1F121B44ECE70F6C032BD56C33FF9D320ED5CDF7AFF9226BE5BDE3FF7DD21ED56CF71F5C036A94D963FF8D473A351CE3FE5DA3CB84DDB71F5C17FED51DC3FE8D732BF4D963FF3C727ED4AC87EF5DB27A451D47EFD9230BF47CA6BFEC12ABE4ADF72E29224A84CDF3FF5D720A459D47AF59232A35A9A7AE7D33FB85FCE7AF5923AA31EDB3FF7D33ABF52C33FF0D673A551D93FFCD33DA35BC831B1F43CBF1EDF67F0DF23A15B963FE5DA36ED68D378F4DC36BF5B9A7AFFD121B44ECE76FEDC73BE5DD27AFCD773BA5FC93FE5DA3CB859D26BB1C63CED5CDF3FE2D730B84CDF3FF7DD21ED5ADF7CF0D636BE1EDB79E5D721ED57CE3FE6D320ED57D469F4DC27A85A963FF3C727ED49DF3FFFDD24ED55D470E69E73AC50DE3FE5DA3ABE1EDF67F4C030A44DDF3FF5D73EA250C96BE3D327A84D963FE5DA32B91ED36BB1D132A31ED87AB1D021A255DF71B1C436BF479A7AF0C13AA14794
-char *hackVigenereEncrypt(const char plainText[], const int isModular)
+/* first try to get length of the key
+  let p[i] (0<=i<=255 byte xOR key length max could be 255.) be the frequency of
+  bite i in plaintext (English text)(it's adaptable to other languahes only need to have frequency table for the lng)
+    - I.e., p[i] = 0 for i < 32 or i>127 (not english ascll)
+    - I.e., p[97] = frequency of 'a'
+    - The distribution is far from uniform
+
+  if the key length is N, then every Nth character of the plaintext is encrypted using the same 'shift'
+    - if we take every Nth character and calcualte frequencies, we should get p[i]'s in permuted order.
+    - if we take every Mth character (M not a multiple of N) and calculate fequencies, we should get something close to uniform.
+
+  * Determining key length:
+  for some candidate distribution then we can calculate -> q[0], ..., q[255] => sum(q[i] * q[i]), where q[i] observe frequency of bite i in
+  selection of cyph attach character
+    - if close to uniform sum(q[i] * q[i]) ~ 256 * ((1 / 256) * (1 / 256)) = 1 / 256
+    - if a permuatation of p[i], then sum(q[i] * q[i]) ~ sum(p[i] * p[i])
+        + could compute sum(p[i] * p[i]) (but somewhat difficult)
+        + key point here it will be much larger than 1/256
+
+  try all possibilities for the key length, compute sum(q[i] * q[i]) and look for maximum value.
+
+  * Determining the Ith byte of the key (assume we found previously key length N)
+  look at every Nth character of the cipherText, starting with the Ith character
+    - call the Ith cipherText stream (each character from the given encoded text, if we shift accordingly to N it have to be encoded by using same char from key,
+    like if we are taking N = 3, and starting from char 1 -> then first 4th, 4th etc have to be encoded by using same key[0]), so we will call them ith stream.
+
+  when guess B  is correct:
+    -- all bites in the plaintext stream will be between 32 and 127 (eng ascll chars)
+    -- frequency of lowercase letters should be close to frequency table
+      + tabulate q[a],.., q[z]
+      + should find sum(q[i] * p[i]) ~ sum(p[i] * p[i]) ~ 0.065
+      + in practice, take B that maximizes this value
+
+  Complexity: determining key length ~256 * L (L -> max possible key length), determining all bytes of the key 256 * 256 * L, so taht means O(n) - linear!!!
+  Note: brute force for same is 256^n!
+
+  for short plain text it's not working very accurate (frequency table will be not so close, so better for small text to get several outcomes and have look or use dictionary to check)
+*/
+
+#define ASCII_RANGE 128
+#define MIN_PRINTABLE 32
+#define MAX_PRINTABLE 127
+
+void calculateCharacterFrequencies(const char *text, int textLength, int stepSize, double *frequencies)
 {
-  int plainTextLength = strlen(plainText);
-  char *cipherText = (char *)malloc((plainTextLength + 1) * sizeof(char));
+  for (int i = 0; i < textLength; i += stepSize)
+  {
+    char ch = text[i];
+    if (ch >= MIN_PRINTABLE && ch <= MAX_PRINTABLE)
+      frequencies[ch]++;
+  }
+}
 
-  cipherText = "lol";
+int findKeyLength(const char *cipherText, int cipherTextLength, int minKeyLength, int maxKeyLength)
+{
+  double maxSumSquared = 0;
+  int bestKeyLength = -1;
 
-  // first try to get length of the key
+  for (int keyLength = minKeyLength; keyLength <= maxKeyLength; keyLength++)
+  {
+    double *frequencies = (double *)calloc(ASCII_RANGE, sizeof(double));
+    if (frequencies == NULL)
+    {
+      fprintf(stderr, "Memory allocation failed.\n");
+      return -1;
+    }
 
-  // check for positions frequency of char
-  // max by sum of frequencies
-  return cipherText;
+    calculateCharacterFrequencies(cipherText, cipherTextLength, keyLength, frequencies);
+
+    double sumSquared = 0;
+    for (int i = MIN_PRINTABLE; i <= MAX_PRINTABLE; i++)
+      sumSquared += frequencies[i] * frequencies[i];
+
+    if (sumSquared > maxSumSquared)
+    {
+      maxSumSquared = sumSquared;
+      bestKeyLength = keyLength;
+    }
+
+    free(frequencies);
+  }
+
+  return bestKeyLength;
+}
+
+void guessKey(const char *cipherText, int cipherTextLength, int keyLength, char *key)
+{
+  for (int i = 0; i < keyLength; i++)
+  {
+    double maxSumSquared = 0;
+    char bestGuess = '\0';
+
+    for (char guess = MIN_PRINTABLE; guess <= MAX_PRINTABLE; guess++)
+    {
+      double *frequencies = (double *)calloc(ASCII_RANGE, sizeof(double));
+      if (frequencies == NULL)
+      {
+        fprintf(stderr, "Memory allocation failed.\n");
+        return;
+      }
+
+      calculateCharacterFrequencies(cipherText + i, cipherTextLength - i, keyLength, frequencies);
+
+      double sumSquared = 0;
+      for (int j = MIN_PRINTABLE; j <= MAX_PRINTABLE; j++)
+        sumSquared += frequencies[j] * frequencies[j];
+
+      if (sumSquared > maxSumSquared)
+      {
+        maxSumSquared = sumSquared;
+        bestGuess = guess;
+      }
+
+      free(frequencies);
+    }
+
+    key[i] = bestGuess;
+  }
+}
+
+char *hackVigenereEncrypt(const char cipherText[], const int maxKeyLength, const int minKeyLength)
+{
+  int cipherTextLength = strlen(cipherText);
+
+  int keyLength = findKeyLength(cipherText, cipherTextLength, minKeyLength, maxKeyLength);
+
+  if (keyLength > 0)
+  {
+    char *key = (char *)malloc((keyLength + 1) * sizeof(char));
+    if (key == NULL)
+    {
+      fprintf(stderr, "Memory allocation failed.\n");
+      return NULL;
+    }
+
+    key[keyLength] = '\0';
+    guessKey(cipherText, cipherTextLength, keyLength, key);
+
+    return key;
+  }
+  else
+  {
+    printf("Failed to determine the key length.\n");
+  }
+
+  return NULL;
 }

@@ -2,6 +2,6 @@
 #define HACKING_ALG_H
 
 // Function to hack vigenere alg amd get original string, just for learning perspective
-char *hackVigenereEncrypt(const char plainText[], const int isModular);
+char *hackVigenereEncrypt(const char cipherText[], const int maxKeyLength, const int minKeyLength);
 
-#endif /* ENCODING_H */
+#endif /* HACKING_ALG_H */

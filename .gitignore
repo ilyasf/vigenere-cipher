@@ -58,3 +58,4 @@ Makefile
 CMakeFiles/
 build/
 .vscode/
+encoded-example.txt
